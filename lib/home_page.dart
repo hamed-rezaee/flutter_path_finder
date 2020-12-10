@@ -1,6 +1,8 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
-import 'package:flutter_path_finder/element.dart';
+import 'package:flutter_path_finder/path_element.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key key}) : super(key: key);
@@ -10,8 +12,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final int rowSize = 50;
-  final int columnSize = 36;
+  final int rowSize = 20;
+  final int columnSize = 20;
 
   int selectedRow;
   int selectedColumn;
@@ -51,8 +53,8 @@ class _HomePageState extends State<HomePage> {
                   for (int column = 0; column < columnSize; column++)
                     GestureDetector(
                       child: Container(
-                        height: 8,
-                        width: 8,
+                        height: 16,
+                        width: 16,
                         margin: const EdgeInsets.all(1),
                         decoration: BoxDecoration(
                           color: row == startRow && column == startColumn
@@ -60,12 +62,12 @@ class _HomePageState extends State<HomePage> {
                               : row == goalRow && column == goalColumn
                                   ? Colors.red
                                   : grid[row][column].inPath
-                                      ? Colors.orange
+                                      ? Colors.yellow[300]
                                       : grid[row][column].visited
-                                          ? Colors.black
+                                          ? Colors.orange[400]
                                           : grid[row][column].passable
-                                              ? Colors.blue[200]
-                                              : Colors.grey[600],
+                                              ? Colors.blue[300]
+                                              : Colors.grey[700],
                           borderRadius: BorderRadius.circular(2),
                         ),
                       ),
@@ -117,6 +119,10 @@ class _HomePageState extends State<HomePage> {
             child: const Text('RUN PATH FINDER'),
             onPressed: () => runFinder(),
           ),
+          FlatButton(
+            child: const Text('RESTART'),
+            onPressed: () => restartGrid(),
+          ),
         ],
       );
 
@@ -134,14 +140,29 @@ class _HomePageState extends State<HomePage> {
     return grid;
   }
 
+  void restartGrid() {
+    for (int row = 0; row < rowSize; row++) {
+      for (int column = 0; column < columnSize; column++) {
+        grid[row][column]
+          ..parent = null
+          ..visited = false
+          ..inPath = false
+          ..g = 0
+          ..h = 0;
+      }
+    }
+
+    setState(() {});
+  }
+
   Future<void> runFinder({bool isBFS = false}) async {
-    final List<PathElement> queue = <PathElement>[]
-      ..add(grid[startRow][startColumn]..visited = true);
+    final List<PathElement> queue = <PathElement>[];
 
     int currentRow;
     int currentColumn;
 
-    PathElement currentPathElement = queue.removeAt(0);
+    PathElement currentPathElement = grid[startRow][startColumn]
+      ..visited = true;
 
     currentPathElement
       ..g = 0
@@ -155,67 +176,76 @@ class _HomePageState extends State<HomePage> {
     currentColumn = currentPathElement.column;
 
     while (grid[goalRow][goalColumn] != currentPathElement) {
-      await Future<void>.delayed(const Duration(milliseconds: 10), () {
+      await Future<void>.delayed(const Duration(milliseconds: 1), () {
         _addChild(
-          row: currentRow - 1,
-          column: currentColumn - 1,
-          queue: queue,
-          element: currentPathElement,
-          isBFS: isBFS,
-        );
-
-        _addChild(
+          cost: 1,
           row: currentRow - 1,
           column: currentColumn,
           queue: queue,
-          element: currentPathElement,
+          parent: currentPathElement,
           isBFS: isBFS,
         );
 
         _addChild(
-          row: currentRow - 1,
-          column: currentColumn + 1,
-          queue: queue,
-          element: currentPathElement,
-          isBFS: isBFS,
-        );
-
-        _addChild(
+          cost: 1,
           row: currentRow,
           column: currentColumn - 1,
           queue: queue,
-          element: currentPathElement,
+          parent: currentPathElement,
           isBFS: isBFS,
         );
 
         _addChild(
+          cost: 1,
           row: currentRow,
           column: currentColumn + 1,
           queue: queue,
-          element: currentPathElement,
-          isBFS: isBFS,
-        );
-        _addChild(
-          row: currentRow + 1,
-          column: currentColumn - 1,
-          queue: queue,
-          element: currentPathElement,
+          parent: currentPathElement,
           isBFS: isBFS,
         );
 
         _addChild(
+          cost: 1,
           row: currentRow + 1,
           column: currentColumn,
           queue: queue,
-          element: currentPathElement,
+          parent: currentPathElement,
           isBFS: isBFS,
         );
 
         _addChild(
+          cost: 1.5,
+          row: currentRow - 1,
+          column: currentColumn - 1,
+          queue: queue,
+          parent: currentPathElement,
+          isBFS: isBFS,
+        );
+
+        _addChild(
+          cost: 1.5,
+          row: currentRow - 1,
+          column: currentColumn + 1,
+          queue: queue,
+          parent: currentPathElement,
+          isBFS: isBFS,
+        );
+
+        _addChild(
+          cost: 1.5,
+          row: currentRow + 1,
+          column: currentColumn - 1,
+          queue: queue,
+          parent: currentPathElement,
+          isBFS: isBFS,
+        );
+
+        _addChild(
+          cost: 1.5,
           row: currentRow + 1,
           column: currentColumn + 1,
           queue: queue,
-          element: currentPathElement,
+          parent: currentPathElement,
           isBFS: isBFS,
         );
 
@@ -232,10 +262,11 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _addChild({
+    @required double cost,
     @required int row,
     @required int column,
     @required List<PathElement> queue,
-    @required PathElement element,
+    @required PathElement parent,
     @required bool isBFS,
   }) {
     if (row >= 0 && column >= 0 && row < rowSize && column < columnSize) {
@@ -246,8 +277,8 @@ class _HomePageState extends State<HomePage> {
         queue.add(
           grid[row][column]
             ..visited = true
-            ..parent = element
-            ..g = element.g
+            ..parent = parent
+            ..g = parent.g + cost
             ..h = h,
         );
       }
@@ -273,9 +304,7 @@ class _HomePageState extends State<HomePage> {
     @required int column,
     @required bool isBFS,
   }) =>
-      isBFS
-          ? 0
-          : ((row - goalRow).abs() + (column - goalColumn).abs()).toDouble();
+      isBFS ? 0 : sqrt(pow(row - goalRow, 2) + pow(column - goalColumn, 2));
 
   void _showShortestPath(PathElement goal) {
     PathElement pathElement = goal;
