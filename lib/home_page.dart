@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_path_finder/path_element.dart';
+import 'package:flutter_path_finder/position.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({Key key}) : super(key: key);
@@ -15,14 +16,9 @@ class _HomePageState extends State<HomePage> {
   final int rowSize = 20;
   final int columnSize = 20;
 
-  int selectedRow;
-  int selectedColumn;
-
-  int startRow;
-  int startColumn;
-
-  int goalRow;
-  int goalColumn;
+  Position startPosition;
+  Position goalPosition;
+  Position selectedPosition;
 
   List<List<PathElement>> grid;
 
@@ -57,9 +53,11 @@ class _HomePageState extends State<HomePage> {
                         width: 16,
                         margin: const EdgeInsets.all(1),
                         decoration: BoxDecoration(
-                          color: row == startRow && column == startColumn
+                          color: Position(row: row, column: column) ==
+                                  startPosition
                               ? Colors.green
-                              : row == goalRow && column == goalColumn
+                              : Position(row: row, column: column) ==
+                                      goalPosition
                                   ? Colors.red
                                   : grid[row][column].inPath
                                       ? Colors.yellow[300]
@@ -75,8 +73,7 @@ class _HomePageState extends State<HomePage> {
                         grid[row][column].passable =
                             !grid[row][column].passable;
 
-                        selectedRow = row;
-                        selectedColumn = column;
+                        selectedPosition = Position(row: row, column: column);
 
                         setState(() {});
                       },
@@ -101,7 +98,7 @@ class _HomePageState extends State<HomePage> {
           ),
           FlatButton(
             child: const Text('RUN PATH FINDER'),
-            onPressed: () => _runFinder(isBFS: true),
+            onPressed: () => _runFinder(false),
           ),
           FlatButton(
             child: const Text('RESTART'),
@@ -117,7 +114,9 @@ class _HomePageState extends State<HomePage> {
       grid.add(<PathElement>[]);
 
       for (int column = 0; column < columnSize; column++) {
-        grid[row].add(PathElement(row: row, column: column));
+        grid[row].add(
+          PathElement(position: Position(row: row, column: column)),
+        );
       }
     }
 
@@ -140,51 +139,46 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _setStart() {
-    if (selectedRow != null && selectedColumn != null) {
-      startRow = selectedRow;
-      startColumn = selectedColumn;
+    if (selectedPosition != null) {
+      startPosition = selectedPosition;
 
       setState(() {});
     }
   }
 
   void _setGoal() {
-    if (selectedRow != null && selectedColumn != null) {
-      goalRow = selectedRow;
-      goalColumn = selectedColumn;
+    if (selectedPosition != null) {
+      goalPosition = selectedPosition;
 
-      grid[goalRow][goalColumn].passable = true;
+      grid[goalPosition.row][goalPosition.column].passable = true;
 
       setState(() {});
     }
   }
 
-  Future<void> _runFinder({bool isBFS = false}) async {
+  Future<void> _runFinder(bool isBFS) async {
     final List<PathElement> queue = <PathElement>[];
 
-    int currentRow;
-    int currentColumn;
+    Position currentPosition;
 
-    PathElement currentPathElement = grid[startRow][startColumn]
-      ..visited = true;
+    PathElement currentPathElement =
+        grid[startPosition.row][startPosition.column]..visited = true;
 
     currentPathElement
       ..g = 0
       ..h = _calculateHeuristic(
-        row: currentPathElement.row,
-        column: currentPathElement.column,
+        position: currentPathElement.position,
         isBFS: isBFS,
       );
 
-    currentRow = currentPathElement.row;
-    currentColumn = currentPathElement.column;
+    currentPosition = currentPathElement.position;
 
-    while (grid[goalRow][goalColumn] != currentPathElement) {
+    while (grid[goalPosition.row][goalPosition.column] != currentPathElement) {
       await Future<void>.delayed(const Duration(milliseconds: 10), () {
         _addChild(
           costMultiplier: 1,
-          row: currentRow - 1,
-          column: currentColumn,
+          row: currentPosition.row - 1,
+          column: currentPosition.column,
           queue: queue,
           parent: currentPathElement,
           isBFS: isBFS,
@@ -192,8 +186,8 @@ class _HomePageState extends State<HomePage> {
 
         _addChild(
           costMultiplier: 1,
-          row: currentRow,
-          column: currentColumn - 1,
+          row: currentPosition.row,
+          column: currentPosition.column - 1,
           queue: queue,
           parent: currentPathElement,
           isBFS: isBFS,
@@ -201,8 +195,8 @@ class _HomePageState extends State<HomePage> {
 
         _addChild(
           costMultiplier: 1,
-          row: currentRow,
-          column: currentColumn + 1,
+          row: currentPosition.row,
+          column: currentPosition.column + 1,
           queue: queue,
           parent: currentPathElement,
           isBFS: isBFS,
@@ -210,8 +204,8 @@ class _HomePageState extends State<HomePage> {
 
         _addChild(
           costMultiplier: 1,
-          row: currentRow + 1,
-          column: currentColumn,
+          row: currentPosition.row + 1,
+          column: currentPosition.column,
           queue: queue,
           parent: currentPathElement,
           isBFS: isBFS,
@@ -219,8 +213,8 @@ class _HomePageState extends State<HomePage> {
 
         _addChild(
           costMultiplier: 1.3,
-          row: currentRow - 1,
-          column: currentColumn - 1,
+          row: currentPosition.row - 1,
+          column: currentPosition.column - 1,
           queue: queue,
           parent: currentPathElement,
           isBFS: isBFS,
@@ -228,8 +222,8 @@ class _HomePageState extends State<HomePage> {
 
         _addChild(
           costMultiplier: 1.3,
-          row: currentRow - 1,
-          column: currentColumn + 1,
+          row: currentPosition.row - 1,
+          column: currentPosition.column + 1,
           queue: queue,
           parent: currentPathElement,
           isBFS: isBFS,
@@ -237,8 +231,8 @@ class _HomePageState extends State<HomePage> {
 
         _addChild(
           costMultiplier: 1.3,
-          row: currentRow + 1,
-          column: currentColumn - 1,
+          row: currentPosition.row + 1,
+          column: currentPosition.column - 1,
           queue: queue,
           parent: currentPathElement,
           isBFS: isBFS,
@@ -246,8 +240,8 @@ class _HomePageState extends State<HomePage> {
 
         _addChild(
           costMultiplier: 1.3,
-          row: currentRow + 1,
-          column: currentColumn + 1,
+          row: currentPosition.row + 1,
+          column: currentPosition.column + 1,
           queue: queue,
           parent: currentPathElement,
           isBFS: isBFS,
@@ -255,8 +249,7 @@ class _HomePageState extends State<HomePage> {
 
         currentPathElement = _getBestChild(queue);
 
-        currentRow = currentPathElement.row;
-        currentColumn = currentPathElement.column;
+        currentPosition = currentPathElement.position;
 
         setState(() {});
       });
@@ -280,7 +273,10 @@ class _HomePageState extends State<HomePage> {
             ..visited = true
             ..parent = parent
             ..g = parent.g + grid[row][column].cost * costMultiplier
-            ..h = _calculateHeuristic(row: row, column: column, isBFS: isBFS),
+            ..h = _calculateHeuristic(
+              position: Position(row: row, column: column),
+              isBFS: isBFS,
+            ),
         );
       }
     }
@@ -301,11 +297,13 @@ class _HomePageState extends State<HomePage> {
   }
 
   double _calculateHeuristic({
-    @required int row,
-    @required int column,
+    @required Position position,
     @required bool isBFS,
   }) =>
-      isBFS ? 0 : sqrt(pow(row - goalRow, 2) + pow(column - goalColumn, 2));
+      isBFS
+          ? 0
+          : sqrt(pow(position.row - goalPosition.row, 2) +
+              pow(position.column - goalPosition.column, 2));
 
   void _showShortestPath(PathElement goal) {
     PathElement pathElement = goal;
