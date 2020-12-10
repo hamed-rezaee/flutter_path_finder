@@ -4,6 +4,8 @@ class PathElement {
   double g = 0;
   double h = 0;
 
+  double cost = 1;
+
   int row;
   int column;
 

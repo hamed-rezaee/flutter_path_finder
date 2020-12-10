@@ -30,7 +30,7 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
 
-    grid = initialGrid();
+    grid = _initialGrid();
   }
 
   @override
@@ -93,40 +93,24 @@ class _HomePageState extends State<HomePage> {
         children: <Widget>[
           FlatButton(
             child: const Text('SET START'),
-            onPressed: () {
-              if (selectedRow != null && selectedColumn != null) {
-                startRow = selectedRow;
-                startColumn = selectedColumn;
-
-                setState(() {});
-              }
-            },
+            onPressed: _setStart,
           ),
           FlatButton(
             child: const Text('SET GOAL'),
-            onPressed: () {
-              if (selectedRow != null && selectedColumn != null) {
-                goalRow = selectedRow;
-                goalColumn = selectedColumn;
-
-                grid[goalRow][goalColumn].passable = true;
-
-                setState(() {});
-              }
-            },
+            onPressed: _setGoal,
           ),
           FlatButton(
             child: const Text('RUN PATH FINDER'),
-            onPressed: () => runFinder(),
+            onPressed: () => _runFinder(isBFS: true),
           ),
           FlatButton(
             child: const Text('RESTART'),
-            onPressed: () => restartGrid(),
+            onPressed: _restartGrid,
           ),
         ],
       );
 
-  List<List<PathElement>> initialGrid() {
+  List<List<PathElement>> _initialGrid() {
     final List<List<PathElement>> grid = <List<PathElement>>[<PathElement>[]];
 
     for (int row = 0; row < rowSize; row++) {
@@ -140,7 +124,7 @@ class _HomePageState extends State<HomePage> {
     return grid;
   }
 
-  void restartGrid() {
+  void _restartGrid() {
     for (int row = 0; row < rowSize; row++) {
       for (int column = 0; column < columnSize; column++) {
         grid[row][column]
@@ -155,7 +139,27 @@ class _HomePageState extends State<HomePage> {
     setState(() {});
   }
 
-  Future<void> runFinder({bool isBFS = false}) async {
+  void _setStart() {
+    if (selectedRow != null && selectedColumn != null) {
+      startRow = selectedRow;
+      startColumn = selectedColumn;
+
+      setState(() {});
+    }
+  }
+
+  void _setGoal() {
+    if (selectedRow != null && selectedColumn != null) {
+      goalRow = selectedRow;
+      goalColumn = selectedColumn;
+
+      grid[goalRow][goalColumn].passable = true;
+
+      setState(() {});
+    }
+  }
+
+  Future<void> _runFinder({bool isBFS = false}) async {
     final List<PathElement> queue = <PathElement>[];
 
     int currentRow;
@@ -166,7 +170,7 @@ class _HomePageState extends State<HomePage> {
 
     currentPathElement
       ..g = 0
-      ..h = calculateHeuristic(
+      ..h = _calculateHeuristic(
         row: currentPathElement.row,
         column: currentPathElement.column,
         isBFS: isBFS,
@@ -176,9 +180,9 @@ class _HomePageState extends State<HomePage> {
     currentColumn = currentPathElement.column;
 
     while (grid[goalRow][goalColumn] != currentPathElement) {
-      await Future<void>.delayed(const Duration(milliseconds: 1), () {
+      await Future<void>.delayed(const Duration(milliseconds: 10), () {
         _addChild(
-          cost: 1,
+          costMultiplier: 1,
           row: currentRow - 1,
           column: currentColumn,
           queue: queue,
@@ -187,7 +191,7 @@ class _HomePageState extends State<HomePage> {
         );
 
         _addChild(
-          cost: 1,
+          costMultiplier: 1,
           row: currentRow,
           column: currentColumn - 1,
           queue: queue,
@@ -196,7 +200,7 @@ class _HomePageState extends State<HomePage> {
         );
 
         _addChild(
-          cost: 1,
+          costMultiplier: 1,
           row: currentRow,
           column: currentColumn + 1,
           queue: queue,
@@ -205,7 +209,7 @@ class _HomePageState extends State<HomePage> {
         );
 
         _addChild(
-          cost: 1,
+          costMultiplier: 1,
           row: currentRow + 1,
           column: currentColumn,
           queue: queue,
@@ -214,7 +218,7 @@ class _HomePageState extends State<HomePage> {
         );
 
         _addChild(
-          cost: 1.5,
+          costMultiplier: 1.3,
           row: currentRow - 1,
           column: currentColumn - 1,
           queue: queue,
@@ -223,7 +227,7 @@ class _HomePageState extends State<HomePage> {
         );
 
         _addChild(
-          cost: 1.5,
+          costMultiplier: 1.3,
           row: currentRow - 1,
           column: currentColumn + 1,
           queue: queue,
@@ -232,7 +236,7 @@ class _HomePageState extends State<HomePage> {
         );
 
         _addChild(
-          cost: 1.5,
+          costMultiplier: 1.3,
           row: currentRow + 1,
           column: currentColumn - 1,
           queue: queue,
@@ -241,7 +245,7 @@ class _HomePageState extends State<HomePage> {
         );
 
         _addChild(
-          cost: 1.5,
+          costMultiplier: 1.3,
           row: currentRow + 1,
           column: currentColumn + 1,
           queue: queue,
@@ -249,7 +253,7 @@ class _HomePageState extends State<HomePage> {
           isBFS: isBFS,
         );
 
-        currentPathElement = getBestChild(queue);
+        currentPathElement = _getBestChild(queue);
 
         currentRow = currentPathElement.row;
         currentColumn = currentPathElement.column;
@@ -262,7 +266,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _addChild({
-    @required double cost,
+    @required double costMultiplier,
     @required int row,
     @required int column,
     @required List<PathElement> queue,
@@ -271,21 +275,18 @@ class _HomePageState extends State<HomePage> {
   }) {
     if (row >= 0 && column >= 0 && row < rowSize && column < columnSize) {
       if (!grid[row][column].visited && grid[row][column].passable) {
-        final double h =
-            calculateHeuristic(row: row, column: column, isBFS: isBFS);
-
         queue.add(
           grid[row][column]
             ..visited = true
             ..parent = parent
-            ..g = parent.g + cost
-            ..h = h,
+            ..g = parent.g + grid[row][column].cost * costMultiplier
+            ..h = _calculateHeuristic(row: row, column: column, isBFS: isBFS),
         );
       }
     }
   }
 
-  PathElement getBestChild(List<PathElement> queue) {
+  PathElement _getBestChild(List<PathElement> queue) {
     int minIndex = 0;
     double minValue = double.infinity;
 
@@ -299,7 +300,7 @@ class _HomePageState extends State<HomePage> {
     return queue.removeAt(minIndex);
   }
 
-  double calculateHeuristic({
+  double _calculateHeuristic({
     @required int row,
     @required int column,
     @required bool isBFS,
