@@ -48,7 +48,7 @@ class _HomePageState extends State<HomePage> {
                     value: _isAStar,
                     onChanged: (bool value) => setState(() => _isAStar = value),
                   ),
-                  const Text('USE ASTAR'),
+                  const Text('Use A* Algorithm'),
                 ],
               ),
             ),
