@@ -122,7 +122,7 @@ class _HomePageState extends State<HomePage> {
     for (int row = 0; row < size; row++) {
       for (int column = 0; column < size; column++) {
         grid[row][column]
-          ..parent = null
+          ..parents = <PathElement>[]
           ..visited = false
           ..inPath = false
           ..g = 0
@@ -160,24 +160,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   Future<void> _runFinder(bool isBFS) async {
-    final List<PathElement> queue = <PathElement>[];
+    final List<PathElement> queue = <PathElement>[]
+      ..add(grid[startPosition.row][startPosition.column]..visited = true);
 
-    Position currentPosition;
-
-    PathElement currentPathElement =
-        grid[startPosition.row][startPosition.column]..visited = true;
-
-    currentPathElement
-      ..g = 0
-      ..h = _calculateHeuristic(
-        position: currentPathElement.position,
-        isBFS: isBFS,
-      );
-
-    currentPosition = currentPathElement.position;
+    PathElement currentPathElement = _getBestChild(queue);
+    Position currentPosition = currentPathElement.position;
 
     while (grid[goalPosition.row][goalPosition.column] != currentPathElement) {
-      await Future<void>.delayed(const Duration(milliseconds: 10), () {
+      await Future<void>.delayed(const Duration(milliseconds: 5), () {
         _addChild(
           costMultiplier: 1,
           row: currentPosition.row - 1,
@@ -258,7 +248,7 @@ class _HomePageState extends State<HomePage> {
       });
     }
 
-    _showShortestPath(currentPathElement);
+    await _showShortestPath(currentPathElement);
   }
 
   void _addChild({
@@ -274,7 +264,6 @@ class _HomePageState extends State<HomePage> {
         queue.add(
           grid[row][column]
             ..visited = true
-            ..parent = parent
             ..g = parent.g + grid[row][column].cost * costMultiplier
             ..h = _calculateHeuristic(
               position: Position(row: row, column: column),
@@ -282,6 +271,8 @@ class _HomePageState extends State<HomePage> {
             ),
         );
       }
+
+      grid[row][column].parents.add(parent);
     }
   }
 
@@ -308,14 +299,31 @@ class _HomePageState extends State<HomePage> {
           : sqrt(pow(position.row - goalPosition.row, 2) +
               pow(position.column - goalPosition.column, 2));
 
-  void _showShortestPath(PathElement goal) {
+  Future<void> _showShortestPath(PathElement goal) async {
     PathElement pathElement = goal;
 
-    while (pathElement.parent != null) {
-      pathElement.inPath = true;
-      pathElement = pathElement.parent;
+    while (pathElement.parents.isNotEmpty &&
+        pathElement.position != startPosition) {
+      await Future<void>.delayed(
+        const Duration(milliseconds: 10),
+        () => setState(() => pathElement = _getBestParent(pathElement.parents)),
+      );
+    }
+  }
+
+  PathElement _getBestParent(List<PathElement> parents) {
+    PathElement bestParent;
+
+    for (final PathElement parent in parents) {
+      if (!parent.inPath) {
+        if (bestParent == null) {
+          bestParent = parent;
+        } else if (parent.g < bestParent.g) {
+          bestParent = parent;
+        }
+      }
     }
 
-    setState(() {});
+    return bestParent..inPath = true;
   }
 }
