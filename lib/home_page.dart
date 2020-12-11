@@ -13,19 +13,21 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final int size = 20;
+  final int _size = 20;
 
-  Position startPosition;
-  Position goalPosition;
-  Position selectedPosition;
+  Position _startPosition;
+  Position _goalPosition;
+  Position _selectedPosition;
 
-  List<List<PathElement>> grid;
+  List<List<PathElement>> _grid;
+
+  bool _isAStar = false;
 
   @override
   void initState() {
     super.initState();
 
-    grid = _initialGrid();
+    _grid = _initialGrid();
   }
 
   @override
@@ -38,6 +40,18 @@ class _HomePageState extends State<HomePage> {
           children: <Widget>[
             _buildGrid(),
             _buildButtonBar(),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: <Widget>[
+                  Checkbox(
+                    value: _isAStar,
+                    onChanged: (bool value) => setState(() => _isAStar = value),
+                  ),
+                  const Text('USE ASTAR'),
+                ],
+              ),
+            ),
           ],
         ),
       );
@@ -46,29 +60,29 @@ class _HomePageState extends State<HomePage> {
         padding: const EdgeInsets.all(16),
         child: GridView.builder(
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: size,
+            crossAxisCount: _size,
             crossAxisSpacing: 2,
             mainAxisSpacing: 2,
           ),
           shrinkWrap: true,
-          itemCount: size * size,
+          itemCount: _size * _size,
           itemBuilder: (BuildContext context, int index) {
-            final int row = index ~/ size;
-            final int column = index % size;
+            final int row = index ~/ _size;
+            final int column = index % _size;
 
             return GestureDetector(
               child: Container(
                 margin: const EdgeInsets.all(1),
                 decoration: BoxDecoration(
-                  color: Position(row: row, column: column) == startPosition
+                  color: Position(row: row, column: column) == _startPosition
                       ? Colors.green
-                      : Position(row: row, column: column) == goalPosition
+                      : Position(row: row, column: column) == _goalPosition
                           ? Colors.red
-                          : grid[row][column].inPath
+                          : _grid[row][column].inPath
                               ? Colors.yellow[300]
-                              : grid[row][column].visited
+                              : _grid[row][column].visited
                                   ? Colors.orange[400]
-                                  : grid[row][column].passable
+                                  : _grid[row][column].passable
                                       ? Colors.blue[300]
                                       : Colors.grey[700],
                   borderRadius: BorderRadius.circular(2),
@@ -97,7 +111,7 @@ class _HomePageState extends State<HomePage> {
           ),
           FlatButton(
             child: const Text('RUN'),
-            onPressed: () => _runFinder(false),
+            onPressed: () => _runFinder(_isAStar),
           ),
         ],
       );
@@ -105,10 +119,10 @@ class _HomePageState extends State<HomePage> {
   List<List<PathElement>> _initialGrid() {
     final List<List<PathElement>> grid = <List<PathElement>>[<PathElement>[]];
 
-    for (int row = 0; row < size; row++) {
+    for (int row = 0; row < _size; row++) {
       grid.add(<PathElement>[]);
 
-      for (int column = 0; column < size; column++) {
+      for (int column = 0; column < _size; column++) {
         grid[row].add(
           PathElement(position: Position(row: row, column: column)),
         );
@@ -119,9 +133,9 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _restartGrid() {
-    for (int row = 0; row < size; row++) {
-      for (int column = 0; column < size; column++) {
-        grid[row][column]
+    for (int row = 0; row < _size; row++) {
+      for (int column = 0; column < _size; column++) {
+        _grid[row][column]
           ..parents = <PathElement>[]
           ..visited = false
           ..inPath = false
@@ -134,39 +148,40 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _setStart() {
-    if (selectedPosition != null) {
-      startPosition = selectedPosition;
+    if (_selectedPosition != null) {
+      _startPosition = _selectedPosition;
 
       setState(() {});
     }
   }
 
   void _setGoal() {
-    if (selectedPosition != null) {
-      goalPosition = selectedPosition;
+    if (_selectedPosition != null) {
+      _goalPosition = _selectedPosition;
 
-      grid[goalPosition.row][goalPosition.column].passable = true;
+      _grid[_goalPosition.row][_goalPosition.column].passable = true;
 
       setState(() {});
     }
   }
 
   void _setWall(int row, int column) {
-    grid[row][column].passable = !grid[row][column].passable;
+    _grid[row][column].passable = !_grid[row][column].passable;
 
-    selectedPosition = Position(row: row, column: column);
+    _selectedPosition = Position(row: row, column: column);
 
     setState(() {});
   }
 
-  Future<void> _runFinder(bool isBFS) async {
+  Future<void> _runFinder(bool isAStar) async {
     final List<PathElement> queue = <PathElement>[]
-      ..add(grid[startPosition.row][startPosition.column]..visited = true);
+      ..add(_grid[_startPosition.row][_startPosition.column]..visited = true);
 
     PathElement currentPathElement = _getBestChild(queue);
     Position currentPosition = currentPathElement.position;
 
-    while (grid[goalPosition.row][goalPosition.column] != currentPathElement) {
+    while (
+        _grid[_goalPosition.row][_goalPosition.column] != currentPathElement) {
       await Future<void>.delayed(const Duration(milliseconds: 5), () {
         _addChild(
           costMultiplier: 1,
@@ -174,7 +189,7 @@ class _HomePageState extends State<HomePage> {
           column: currentPosition.column,
           queue: queue,
           parent: currentPathElement,
-          isBFS: isBFS,
+          isAStar: isAStar,
         );
 
         _addChild(
@@ -183,7 +198,7 @@ class _HomePageState extends State<HomePage> {
           column: currentPosition.column - 1,
           queue: queue,
           parent: currentPathElement,
-          isBFS: isBFS,
+          isAStar: isAStar,
         );
 
         _addChild(
@@ -192,7 +207,7 @@ class _HomePageState extends State<HomePage> {
           column: currentPosition.column + 1,
           queue: queue,
           parent: currentPathElement,
-          isBFS: isBFS,
+          isAStar: isAStar,
         );
 
         _addChild(
@@ -201,7 +216,7 @@ class _HomePageState extends State<HomePage> {
           column: currentPosition.column,
           queue: queue,
           parent: currentPathElement,
-          isBFS: isBFS,
+          isAStar: isAStar,
         );
 
         _addChild(
@@ -210,7 +225,7 @@ class _HomePageState extends State<HomePage> {
           column: currentPosition.column - 1,
           queue: queue,
           parent: currentPathElement,
-          isBFS: isBFS,
+          isAStar: isAStar,
         );
 
         _addChild(
@@ -219,7 +234,7 @@ class _HomePageState extends State<HomePage> {
           column: currentPosition.column + 1,
           queue: queue,
           parent: currentPathElement,
-          isBFS: isBFS,
+          isAStar: isAStar,
         );
 
         _addChild(
@@ -228,7 +243,7 @@ class _HomePageState extends State<HomePage> {
           column: currentPosition.column - 1,
           queue: queue,
           parent: currentPathElement,
-          isBFS: isBFS,
+          isAStar: isAStar,
         );
 
         _addChild(
@@ -237,7 +252,7 @@ class _HomePageState extends State<HomePage> {
           column: currentPosition.column + 1,
           queue: queue,
           parent: currentPathElement,
-          isBFS: isBFS,
+          isAStar: isAStar,
         );
 
         currentPathElement = _getBestChild(queue);
@@ -257,26 +272,26 @@ class _HomePageState extends State<HomePage> {
     @required int column,
     @required List<PathElement> queue,
     @required PathElement parent,
-    @required bool isBFS,
+    @required bool isAStar,
   }) {
-    if (row >= 0 && column >= 0 && row < size && column < size) {
-      if (!grid[row][column].visited && grid[row][column].passable) {
+    if (row >= 0 && column >= 0 && row < _size && column < _size) {
+      if (!_grid[row][column].visited && _grid[row][column].passable) {
         queue.add(
-          grid[row][column]
+          _grid[row][column]
             ..visited = true
-            ..g = parent.g + grid[row][column].cost * costMultiplier
+            ..g = parent.g + _grid[row][column].cost * costMultiplier
             ..h = _calculateHeuristic(
               position: Position(row: row, column: column),
-              isBFS: isBFS,
+              isAStar: isAStar,
             ),
         );
       }
 
-      grid[row][column].parents.add(parent);
+      _grid[row][column].parents.add(parent);
 
-      grid[row][column].g = min(
-        grid[row][column].g,
-        parent.g + grid[row][column].cost * costMultiplier,
+      _grid[row][column].g = min(
+        _grid[row][column].g,
+        parent.g + _grid[row][column].cost * costMultiplier,
       );
     }
   }
@@ -297,19 +312,19 @@ class _HomePageState extends State<HomePage> {
 
   double _calculateHeuristic({
     @required Position position,
-    @required bool isBFS,
+    @required bool isAStar,
   }) =>
-      isBFS
-          ? 0
-          : sqrt(pow(position.row - goalPosition.row, 2) +
-              pow(position.column - goalPosition.column, 2));
+      isAStar
+          ? sqrt(pow(position.row - _goalPosition.row, 2) +
+              pow(position.column - _goalPosition.column, 2))
+          : 0;
 
   Future<void> _showShortestPath(PathElement goal) async {
     final List<PathElement> shortestPath = <PathElement>[];
     PathElement pathElement = goal;
 
     while (pathElement.parents.isNotEmpty &&
-        pathElement.position != startPosition) {
+        pathElement.position != _startPosition) {
       shortestPath.add(pathElement = _getBestParent(pathElement.parents));
     }
 
