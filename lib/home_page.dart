@@ -273,6 +273,11 @@ class _HomePageState extends State<HomePage> {
       }
 
       grid[row][column].parents.add(parent);
+
+      grid[row][column].g = min(
+        grid[row][column].g,
+        parent.g + grid[row][column].cost * costMultiplier,
+      );
     }
   }
 
