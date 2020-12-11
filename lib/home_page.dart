@@ -13,8 +13,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  final int rowSize = 20;
-  final int columnSize = 20;
+  final int size = 20;
 
   Position startPosition;
   Position goalPosition;
@@ -35,53 +34,49 @@ class _HomePageState extends State<HomePage> {
           elevation: 0,
           title: const Text('Flutter Path Finder'),
         ),
-        body: _buildGrid(),
+        body: Column(
+          children: <Widget>[
+            _buildGrid(),
+            _buildButtonBar(),
+          ],
+        ),
       );
 
   Widget _buildGrid() => Padding(
         padding: const EdgeInsets.all(16),
-        child: Column(
-          children: <Widget>[
-            for (int row = 0; row < rowSize; row++)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  for (int column = 0; column < columnSize; column++)
-                    GestureDetector(
-                      child: Container(
-                        height: 16,
-                        width: 16,
-                        margin: const EdgeInsets.all(1),
-                        decoration: BoxDecoration(
-                          color: Position(row: row, column: column) ==
-                                  startPosition
-                              ? Colors.green
-                              : Position(row: row, column: column) ==
-                                      goalPosition
-                                  ? Colors.red
-                                  : grid[row][column].inPath
-                                      ? Colors.yellow[300]
-                                      : grid[row][column].visited
-                                          ? Colors.orange[400]
-                                          : grid[row][column].passable
-                                              ? Colors.blue[300]
-                                              : Colors.grey[700],
-                          borderRadius: BorderRadius.circular(2),
-                        ),
-                      ),
-                      onTap: () {
-                        grid[row][column].passable =
-                            !grid[row][column].passable;
+        child: GridView.builder(
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: size,
+            crossAxisSpacing: 2,
+            mainAxisSpacing: 2,
+          ),
+          shrinkWrap: true,
+          itemCount: size * size,
+          itemBuilder: (BuildContext context, int index) {
+            final int row = index ~/ size;
+            final int column = index % size;
 
-                        selectedPosition = Position(row: row, column: column);
-
-                        setState(() {});
-                      },
-                    )
-                ],
+            return GestureDetector(
+              child: Container(
+                margin: const EdgeInsets.all(1),
+                decoration: BoxDecoration(
+                  color: Position(row: row, column: column) == startPosition
+                      ? Colors.green
+                      : Position(row: row, column: column) == goalPosition
+                          ? Colors.red
+                          : grid[row][column].inPath
+                              ? Colors.yellow[300]
+                              : grid[row][column].visited
+                                  ? Colors.orange[400]
+                                  : grid[row][column].passable
+                                      ? Colors.blue[300]
+                                      : Colors.grey[700],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
-            _buildButtonBar()
-          ],
+              onTap: () => _setWall(row, column),
+            );
+          },
         ),
       );
 
@@ -97,12 +92,12 @@ class _HomePageState extends State<HomePage> {
             onPressed: _setGoal,
           ),
           FlatButton(
-            child: const Text('RUN PATH FINDER'),
-            onPressed: () => _runFinder(false),
-          ),
-          FlatButton(
             child: const Text('RESTART'),
             onPressed: _restartGrid,
+          ),
+          FlatButton(
+            child: const Text('RUN'),
+            onPressed: () => _runFinder(false),
           ),
         ],
       );
@@ -110,10 +105,10 @@ class _HomePageState extends State<HomePage> {
   List<List<PathElement>> _initialGrid() {
     final List<List<PathElement>> grid = <List<PathElement>>[<PathElement>[]];
 
-    for (int row = 0; row < rowSize; row++) {
+    for (int row = 0; row < size; row++) {
       grid.add(<PathElement>[]);
 
-      for (int column = 0; column < columnSize; column++) {
+      for (int column = 0; column < size; column++) {
         grid[row].add(
           PathElement(position: Position(row: row, column: column)),
         );
@@ -124,8 +119,8 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _restartGrid() {
-    for (int row = 0; row < rowSize; row++) {
-      for (int column = 0; column < columnSize; column++) {
+    for (int row = 0; row < size; row++) {
+      for (int column = 0; column < size; column++) {
         grid[row][column]
           ..parent = null
           ..visited = false
@@ -154,6 +149,14 @@ class _HomePageState extends State<HomePage> {
 
       setState(() {});
     }
+  }
+
+  void _setWall(int row, int column) {
+    grid[row][column].passable = !grid[row][column].passable;
+
+    selectedPosition = Position(row: row, column: column);
+
+    setState(() {});
   }
 
   Future<void> _runFinder(bool isBFS) async {
@@ -266,7 +269,7 @@ class _HomePageState extends State<HomePage> {
     @required PathElement parent,
     @required bool isBFS,
   }) {
-    if (row >= 0 && column >= 0 && row < rowSize && column < columnSize) {
+    if (row >= 0 && column >= 0 && row < size && column < size) {
       if (!grid[row][column].visited && grid[row][column].passable) {
         queue.add(
           grid[row][column]
