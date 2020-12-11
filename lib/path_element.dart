@@ -15,5 +15,4 @@ class PathElement {
   bool inPath = false;
 
   List<PathElement> parents = <PathElement>[];
-  List<PathElement> children = <PathElement>[];
 }

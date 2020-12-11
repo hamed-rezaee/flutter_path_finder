@@ -305,13 +305,18 @@ class _HomePageState extends State<HomePage> {
               pow(position.column - goalPosition.column, 2));
 
   Future<void> _showShortestPath(PathElement goal) async {
+    final List<PathElement> shortestPath = <PathElement>[];
     PathElement pathElement = goal;
 
     while (pathElement.parents.isNotEmpty &&
         pathElement.position != startPosition) {
+      shortestPath.add(pathElement = _getBestParent(pathElement.parents));
+    }
+
+    while (shortestPath.isNotEmpty) {
       await Future<void>.delayed(
         const Duration(milliseconds: 10),
-        () => setState(() => pathElement = _getBestParent(pathElement.parents)),
+        () => setState(() => shortestPath.removeLast()..inPath = true),
       );
     }
   }
@@ -329,6 +334,6 @@ class _HomePageState extends State<HomePage> {
       }
     }
 
-    return bestParent..inPath = true;
+    return bestParent;
   }
 }
