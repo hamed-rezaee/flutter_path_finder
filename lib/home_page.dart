@@ -182,78 +182,18 @@ class _HomePageState extends State<HomePage> {
 
     while (
         _grid[_goalPosition.row][_goalPosition.column] != currentPathElement) {
-      await Future<void>.delayed(const Duration(milliseconds: 5), () {
-        _addChild(
-          costMultiplier: 1,
-          row: currentPosition.row - 1,
-          column: currentPosition.column,
-          queue: queue,
-          parent: currentPathElement,
-          isAStar: isAStar,
-        );
+      await Future<void>.delayed(const Duration(milliseconds: 1), () {
+        final List<Position> positions = _getAdjacens(currentPosition);
 
-        _addChild(
-          costMultiplier: 1,
-          row: currentPosition.row,
-          column: currentPosition.column - 1,
-          queue: queue,
-          parent: currentPathElement,
-          isAStar: isAStar,
-        );
-
-        _addChild(
-          costMultiplier: 1,
-          row: currentPosition.row,
-          column: currentPosition.column + 1,
-          queue: queue,
-          parent: currentPathElement,
-          isAStar: isAStar,
-        );
-
-        _addChild(
-          costMultiplier: 1,
-          row: currentPosition.row + 1,
-          column: currentPosition.column,
-          queue: queue,
-          parent: currentPathElement,
-          isAStar: isAStar,
-        );
-
-        _addChild(
-          costMultiplier: 1.3,
-          row: currentPosition.row - 1,
-          column: currentPosition.column - 1,
-          queue: queue,
-          parent: currentPathElement,
-          isAStar: isAStar,
-        );
-
-        _addChild(
-          costMultiplier: 1.3,
-          row: currentPosition.row - 1,
-          column: currentPosition.column + 1,
-          queue: queue,
-          parent: currentPathElement,
-          isAStar: isAStar,
-        );
-
-        _addChild(
-          costMultiplier: 1.3,
-          row: currentPosition.row + 1,
-          column: currentPosition.column - 1,
-          queue: queue,
-          parent: currentPathElement,
-          isAStar: isAStar,
-        );
-
-        _addChild(
-          costMultiplier: 1.3,
-          row: currentPosition.row + 1,
-          column: currentPosition.column + 1,
-          queue: queue,
-          parent: currentPathElement,
-          isAStar: isAStar,
-        );
+        for (int i = 0; i < positions.length; i++) {
+          _addChild(
+            costMultiplier: i < 4 ? 1 : 1.3,
+            position: positions[i],
+            queue: queue,
+            parent: currentPathElement,
+            isAStar: isAStar,
+          );
+        }
 
         currentPathElement = _getBestChild(queue);
 
@@ -266,33 +206,74 @@ class _HomePageState extends State<HomePage> {
     await _showShortestPath(currentPathElement);
   }
 
+  List<Position> _getAdjacens(Position currentPosition) => <Position>[
+        Position(
+          row: currentPosition.row - 1,
+          column: currentPosition.column,
+        ),
+        Position(
+          row: currentPosition.row,
+          column: currentPosition.column - 1,
+        ),
+        Position(
+          row: currentPosition.row,
+          column: currentPosition.column + 1,
+        ),
+        Position(
+          row: currentPosition.row + 1,
+          column: currentPosition.column,
+        ),
+        Position(
+          row: currentPosition.row - 1,
+          column: currentPosition.column - 1,
+        ),
+        Position(
+          row: currentPosition.row - 1,
+          column: currentPosition.column + 1,
+        ),
+        Position(
+          row: currentPosition.row + 1,
+          column: currentPosition.column - 1,
+        ),
+        Position(
+          row: currentPosition.row + 1,
+          column: currentPosition.column + 1,
+        ),
+      ];
+
   void _addChild({
     @required double costMultiplier,
-    @required int row,
-    @required int column,
+    @required Position position,
     @required List<PathElement> queue,
     @required PathElement parent,
     @required bool isAStar,
   }) {
-    if (row >= 0 && column >= 0 && row < _size && column < _size) {
-      if (!_grid[row][column].visited && _grid[row][column].passable) {
+    if (position.row >= 0 &&
+        position.column >= 0 &&
+        position.row < _size &&
+        position.column < _size) {
+      if (!_grid[position.row][position.column].visited &&
+          _grid[position.row][position.column].passable) {
         queue.add(
-          _grid[row][column]
+          _grid[position.row][position.column]
             ..visited = true
-            ..g = parent.g + _grid[row][column].cost * costMultiplier
+            ..g = parent.g +
+                _grid[position.row][position.column].cost * costMultiplier
             ..h = _calculateHeuristic(
-              position: Position(row: row, column: column),
+              position: Position(row: position.row, column: position.column),
               isAStar: isAStar,
             ),
         );
       }
 
-      _grid[row][column].parents.add(parent);
+      _grid[position.row][position.column].parents.add(parent);
 
-      _grid[row][column].g = min(
-        _grid[row][column].g,
-        parent.g + _grid[row][column].cost * costMultiplier,
-      );
+      if (_grid[position.row][position.column].g != 0) {
+        _grid[position.row][position.column].g = min(
+          _grid[position.row][position.column].g,
+          parent.g + _grid[position.row][position.column].cost * costMultiplier,
+        );
+      }
     }
   }
 
