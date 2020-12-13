@@ -21,7 +21,7 @@ class _HomePageState extends State<HomePage> {
 
   List<List<PathElement>> _grid;
 
-  bool _isAStar = false;
+  bool _isAStar = true;
 
   @override
   void initState() {
@@ -183,12 +183,12 @@ class _HomePageState extends State<HomePage> {
     while (
         _grid[_goalPosition.row][_goalPosition.column] != currentPathElement) {
       await Future<void>.delayed(const Duration(milliseconds: 1), () {
-        final List<Position> positions = _getAdjacens(currentPosition);
+        final List<Position> adjacents = _getAdjacents(currentPosition);
 
-        for (int i = 0; i < positions.length; i++) {
+        for (int i = 0; i < adjacents.length; i++) {
           _addChild(
             costMultiplier: i < 4 ? 1 : 1.3,
-            position: positions[i],
+            position: adjacents[i],
             queue: queue,
             parent: currentPathElement,
             isAStar: isAStar,
@@ -206,7 +206,7 @@ class _HomePageState extends State<HomePage> {
     await _showShortestPath(currentPathElement);
   }
 
-  List<Position> _getAdjacens(Position currentPosition) => <Position>[
+  List<Position> _getAdjacents(Position currentPosition) => <Position>[
         Position(
           row: currentPosition.row - 1,
           column: currentPosition.column,
